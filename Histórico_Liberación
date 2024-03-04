@@ -1,0 +1,356 @@
+
+#_|  LIBRERIAS USADAS PARA LA FUNCIÓN ________________________ ####
+library(readxl)
+library(tidyr)
+library(lubridate)
+library(gt)
+library(fontawesome)
+
+## ______________ FIN DE LIBRERIAS ________________ ##
+
+#_| LECUTRA DE LAS BASES DE DATOS ________________________ ####
+B_CHO <- read_excel("//ntcastilla/VA/Campo Castilla/Agronomia/LEGALIZACIONESYMATRICES/BASES/1. Barrenadores del tallo chorra/Matriz_Dig_Chorra 2021-2023 Actual-.xlsx", 
+                       sheet = "Eval_Barrenadores", na = " ", 
+                       skip = 10)
+B_LIB <- read_excel("//ntcastilla/VA/Campo Castilla/Agronomia/LEGALIZACIONESYMATRICES/BASES/3. Liberación de insectos Benéficos/Editar - Matriz_Dig_Liberación de insectos Benéficos.xlsx", 
+                           sheet = "Liberación Benéficos (Diatraea)", 
+                           skip = 4)
+## ______________ FIN LECTURA DE BASES ________________ ##
+
+#_| CREACIÓN DE LA FUNCIÓN PARA EL HISTORICO DE LIBERACIÓN _______________ ####
+HISTORICO_LIBERACIONES <- function(B_CHORRA,B_LIBERACION,ME){
+  
+  B_CHORRA_MD <- subset(B_CHORRA, EMPRESA == "2.Manejo Directo")
+  B_CHORRA_MD$Fecha <- as.Date(B_CHORRA_MD$Fecha)
+  
+  if(ME==1){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2024-01-01" 
+                                   & B_CHORRA_MD$Fecha <= "2024-01-31",]
+    
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==2){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2024-02-01" 
+                                   & B_CHORRA_MD$Fecha <= "2024-02-29",]
+    
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==3){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-03-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-03-31",]
+    
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==4){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-04-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-04-30",]
+    
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==5){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-05-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-05-31",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==6){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-06-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-06-30",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==7){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-07-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-07-31",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==8){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-08-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-08-31",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==9){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-09-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-09-30",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==10){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-10-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-10-31",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==11){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-11-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-11-30",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  if(ME==12){
+    B_CHORRA_MD_MES <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2023-12-01" 
+                                   & B_CHORRA_MD$Fecha <= "2023-12-31",]
+    
+    INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_MES), ncol = length(B_CHORRA_MD_MES))
+    INTERES <- as.data.frame(INTERES)
+    for (i in 1:nrow(B_CHORRA_MD_MES)) {
+      if(B_CHORRA_MD_MES$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_MES[i,]}
+    }
+    INTERES <- INTERES %>% drop_na(V28)
+    INTERES <- INTERES %>% drop_na(V16)
+    colnames(INTERES) <- c(colnames(B_CHORRA_MD_MES))
+  }
+  
+  TABLA_INFORME <- matrix(data = NA, ncol = 7, nrow = nrow(INTERES)) 
+  B_CHORRA_MD_C_ANTE <- subset(B_CHORRA_MD,AÑO == 2023) # Change Year
+  TABLA_INFORME <- as.data.frame(TABLA_INFORME)
+  DIF <- matrix(data = NA, nrow = 1, ncol = 15)
+  TABLAS_LIBERACIONES <- list()
+  DIFERENCIAS <- list()
+  LIBERACIONES <- matrix(data = NA, ncol = 4, nrow = 15)
+  LIBERACIONES <- as.data.frame(LIBERACIONES)
+  
+  for (i in 1:nrow(INTERES)) {
+    TABLA_INFORME[i,1] <- INTERES$`SECTOR SUERTE`[i]
+    TABLA_INFORME[i,2] <- INTERES$HACIENDA[i]
+    TABLA_INFORME[i,3] <- round(INTERES$`EDAD DE CORTE`[i], digits = 1)
+    TABLA_INFORME[i,6] <- INTERES$Fecha[i]
+    TABLA_INFORME[i,7] <- round(INTERES$`Intensidad de infestación...28`[i],1)
+    DATOS_ANTERIORES <-  subset(B_CHORRA_MD_C_ANTE,`SECTOR SUERTE` == c(TABLA_INFORME[i,1]))
+    TABLA_INFORME[i,4] <- TABLA_INFORME[i,6]-(INTERES$`EDAD DE CORTE`[i]*(365/12))
+    
+    if(is.na(DATOS_ANTERIORES$`Intensidad de infestación...28`[1])){
+      TABLA_INFORME[i,5] <- 3.5
+    }
+    else(TABLA_INFORME[i,5] <- round(DATOS_ANTERIORES$`Intensidad de infestación...28`,1))
+    
+    # TABLA_INFORME[i,5] <- DATOS_ANTERIORES$`Intensidad de infestación...28`
+    
+    TABLA_INFORME$V4 <- as.Date(TABLA_INFORME$V4)
+    TABLA_INFORME$V6 <- as.Date(TABLA_INFORME$V6)
+    
+    LIB <- subset(B_LIBERACION, `Sector - Suerte` == TABLA_INFORME[i,1])
+    LIB <- LIB[LIB$Fecha >= TABLA_INFORME[i,4] & 
+                 LIB$Fecha <= TABLA_INFORME[i,6],]
+    
+    LIBERACIONES <- matrix(data = NA, ncol = 4, nrow = 15)
+    LIBERACIONES <- as.data.frame(LIBERACIONES)
+    DIF <- matrix(data = NA, nrow = 1, ncol = 15)
+    for (j in 1:nrow(LIB)) {
+      LIBERACIONES[j,1] <- as.Date(LIB$Fecha[j])
+      LIBERACIONES[j,2] <- LIB$`Sector - Suerte`[j]
+      LIBERACIONES[j,3] <- LIB$Insecto[j]
+      LIBERACIONES[j,4] <- LIB$cantidad[j]
+      LIBERACIONES[,1] <- as.Date(as.numeric(LIBERACIONES[,1]))
+      colnames(LIBERACIONES) <- c("Fecha", "Sector-Suerte","Insecto","Cantidad")
+      LIBERACIONES <- as.data.frame(LIBERACIONES)
+      LIBERACIONES <- LIBERACIONES %>% drop_na(Fecha)
+      DIF[1,j] <- interval(TABLA_INFORME[i,4], LIB$Fecha[j]) %/% days(1) / (365/12)
+    }
+    #LIBERACIONES <- as.matrix(LIBERACIONES)
+    ## __________ PROCESO DE TABLAS BONITAS EN LAS DE LIBERACIONES ___________________ || #
+    LIBERACIONES$Fecha <- as.character(LIBERACIONES$Fecha)
+    LIBERACIONES  <- LIBERACIONES %>% gt() |>
+      tab_header(
+        title = md(paste("Suerte: ",LIBERACIONES[1,2],fa("leaf"))),
+        subtitle = "Historico de liberaciones") |>
+      data_color(
+        palette = "#F0FFFF") |> 
+      opt_stylize(style = 6, color = "red") |>
+      tab_style(
+        style = list(
+          cell_fill(color = "#F0FFFF"),
+          cell_borders(sides = c("l", "r"), color = "black", weight = px(2))
+        ),
+        locations = cells_body(columns = c(Fecha,`Sector-Suerte`,Insecto,Cantidad))
+      ) |>
+      tab_style(
+        style = list(
+          cell_fill(color = "gray70"),
+          cell_borders(sides = c("l", "r"), color = "black", weight = px(2))
+        ),
+        locations = cells_body(columns = Fecha)
+      ) |>
+      tab_style(
+        style = cell_fill(color = "gray98"),
+        locations = cells_title()
+      ) |>
+      tab_style(
+        style = cell_text(
+          size = "smaller",
+          weight = "bold",
+          transform = "uppercase"
+        ),
+        locations = cells_stub()
+      ) |>
+      cols_align(align = "center", columns = c(Fecha,`Sector-Suerte`,Insecto,Cantidad))
+    
+    TABLAS_LIBERACIONES[[i]] <- LIBERACIONES
+    DIFERENCIAS[[i]] <- DIF
+    
+    # TABLA_INFORME$V4 <- as.Date(TABLA_INFORME$V4)
+    # TABLA_INFORME$V6 <- as.Date(TABLA_INFORME$V6)
+  }
+  TABLA_INFORME$Orden <- seq(1:nrow(TABLA_INFORME))
+  colnames(TABLA_INFORME) <- c("UT","Hacienda","Edad Cosecha",
+                               "Fecha Eval. (Anterior)", "% de I. de I. (Anterior)",
+                               "Fecha Eval. (Actual)", "% de I. de I. (Actual)","Orden")
+  TABLA_INFORME$`Fecha Eval. (Actual)` <-  as.character(TABLA_INFORME$`Fecha Eval. (Actual)`)
+  TABLA_INFORME$`Fecha Eval. (Anterior)` <-  as.character(TABLA_INFORME$`Fecha Eval. (Anterior)`)
+  MESES <- c("Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre")
+  
+  
+  ##____________TABLA_INFORME BONITA ______________________________ ##
+  
+  TABLA_INFORME  <- TABLA_INFORME %>% gt() |>
+    tab_header(
+      title = md(paste("Tabla Resumen del Mes de ",MESES[ME],fa("leaf"))),
+      subtitle = "Suertes con Intensidad de Infestación Mayor a 3") |>
+    data_color(
+      palette = "#F0FFFF") |> 
+    opt_stylize(style = 6, color = "red") |>
+    tab_style(
+      style = list(
+        cell_fill(color = "#F0FFFF"),
+        cell_borders(sides = c("l", "r","l"), color = "black", weight = px(2))
+      ),
+      locations = cells_body(columns = c(UT,Hacienda,`Edad Cosecha`,`Fecha Eval. (Anterior)`,
+                                         `% de I. de I. (Anterior)`,`Fecha Eval. (Actual)`,
+                                         `% de I. de I. (Actual)`,Orden))
+    ) |>
+    tab_style(
+      style = list(
+        cell_fill(color = "gray70"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(2))
+      ),
+      locations = cells_body(columns = UT)
+    ) |>
+    tab_style(
+      style = cell_fill(color = "gray98"),
+      locations = cells_title()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    cols_align(align = "center", columns = c(UT,Hacienda,`Edad Cosecha`,`Fecha Eval. (Anterior)`,
+                                             `% de I. de I. (Anterior)`,`Fecha Eval. (Actual)`,
+                                             `% de I. de I. (Actual)`,Orden))
+  
+  #TABLAS_LIBERACIONES
+  #DIFERENCIAS
+  DIFERENCIAS <- lapply(DIFERENCIAS, function(x) x[!is.na(x)])
+  #print(TABLA_INFORME)
+  #print(TABLAS_LIBERACIONES)
+  #print(DIFERENCIAS)
+  return(list(TABLA_INFORME,TABLAS_LIBERACIONES,DIFERENCIAS))
+}
+
+#_| EJECUCIÓN DE LA FUNCION PARA OBTENER EL HISTORICO _________________ ####
+# __ Primer Argumento = "B_CHO" BD de la matriz de Chorra ________________ #
+# __ Segundo Argumento = "C_LIB" BD de liberación para obtener historico _ #
+# __ Terver Argumento = "[1,12]" = Mes que desea obtener el historico ____ #
+#__________________________________________________________________________#
+
+HISTORICO_LIBERACIONES(B_CHO,B_LIB,2)
+LISTA <- HISTORICO_LIBERACIONES(B_CHO,B_LIB,2)
+LISTA[1]
+LISTA[[2]][[12]]
