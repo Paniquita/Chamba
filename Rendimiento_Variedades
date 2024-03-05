@@ -1,0 +1,387 @@
+
+library(readxl)
+library(fontawesome)
+library(gt)
+library(dplyr)
+
+H_CAS <- read_excel("Historicos_Castilla_Desde_2010.xlsx",sheet = "Base", skip = 6)
+
+HISTORICO_CASTILLA_VARIEDADES <- function(B_HL,A,C){
+  B_ANUAL <- subset(B_HL, AÑO == A)
+  B_ANUAL <- subset(B_ANUAL, `Ingenio Cosecha`  == "Cas")
+  
+  B_ANUAL_SOCA <- subset(B_ANUAL, `Plantilla Soca` == "Soca")
+  B_ANUAL_PLANTILLA <- subset(B_ANUAL, `Plantilla Soca` == "Plantilla")
+
+  if(C == 1){
+    B_HCAS_INT_SOCA <- B_ANUAL_SOCA[B_ANUAL_SOCA$MES >= 1 &
+                                      B_ANUAL_SOCA$MES <= 3,]
+    B_HCAS_INT_PLANTILLA <- B_ANUAL_PLANTILLA[B_ANUAL_PLANTILLA$MES >= 1 &
+                                                B_ANUAL_PLANTILLA$MES <= 3,]
+  }
+  
+  if(C == 2){
+    B_HCAS_INT_SOCA <- B_ANUAL_SOCA[B_ANUAL_SOCA$MES >= 4 &
+                                      B_ANUAL_SOCA$MES <= 6,]
+    B_HCAS_INT_PLANTILLA <- B_ANUAL_PLANTILLA[B_ANUAL_PLANTILLA$MES >= 4 &
+                                                B_ANUAL_PLANTILLA$MES <= 6,]
+  }
+  
+  if(C == 3){
+    B_HCAS_INT_SOCA <- B_ANUAL_SOCA[B_ANUAL_SOCA$MES >= 7 &
+                                      B_ANUAL_SOCA$MES <= 9,]
+    B_HCAS_INT_PLANTILLA <- B_ANUAL_PLANTILLA[B_ANUAL_PLANTILLA$MES >= 7 &
+                                                B_ANUAL_PLANTILLA$MES <= 9,]
+  }
+  
+  if(C == 4){
+    B_HCAS_INT_SOCA <- B_ANUAL_SOCA[B_ANUAL_SOCA$MES >= 10 &
+                                      B_ANUAL_SOCA$MES <= 12,]
+    B_HCAS_INT_PLANTILLA <- B_ANUAL_PLANTILLA[B_ANUAL_PLANTILLA$MES >= 10 &
+                                                B_ANUAL_PLANTILLA$MES <= 12,]
+  }
+  
+  if(C == 5){
+    B_HCAS_INT_SOCA <- B_ANUAL_SOCA[B_ANUAL_SOCA$MES >= 1 &
+                                      B_ANUAL_SOCA$MES <= 12,]
+    B_HCAS_INT_PLANTILLA <- B_ANUAL_PLANTILLA[B_ANUAL_PLANTILLA$MES >= 1 &
+                                                B_ANUAL_PLANTILLA$MES <= 12,]
+  }
+
+  MD_SOCA <- subset(B_HCAS_INT_SOCA, TENENCIA == "2.Manejo Directo")
+  VARIEDADES_MD_SOCA <- unique(MD_SOCA$VARIEDAD)
+
+  Tabla_Informe_MD_SOCA <- matrix(data = NA, nrow = length(VARIEDADES_MD_SOCA),ncol = 13)
+  Tabla_Informe_MD_SOCA <- as.data.frame(Tabla_Informe_MD_SOCA)
+  for (i in 1:length(VARIEDADES_MD_SOCA)) {
+    
+    B_VAR_SOCA <- subset(MD_SOCA, VARIEDAD == VARIEDADES_MD_SOCA[i])
+    # __ #  |  TABLA PARA LA VARIEDAD DE MANEJO DIRECTO SOCA  |  # __ #
+    
+    Tabla_Informe_MD_SOCA[i,1] <- VARIEDADES_MD_SOCA[i] # AQUI DEBE IR i
+    Tabla_Informe_MD_SOCA[i,2] <- round(sum(B_VAR_SOCA$`T*rdto`),0)
+    Tabla_Informe_MD_SOCA[i,3] <- round(sum(B_VAR_SOCA$`TONS REAL`),0)
+    Tabla_Informe_MD_SOCA[i,4] <- round(sum(B_VAR_SOCA$AREA),2)
+    Tabla_Informe_MD_SOCA[i,5] <- round(Tabla_Informe_MD_SOCA[i,3]/Tabla_Informe_MD_SOCA[i,4],0)
+    Tabla_Informe_MD_SOCA[i,6] <- round(Tabla_Informe_MD_SOCA[i,2]/Tabla_Informe_MD_SOCA[i,3],1)
+    Tabla_Informe_MD_SOCA[i,7] <- round((Tabla_Informe_MD_SOCA[i,5]*Tabla_Informe_MD_SOCA[i,6])/100,2)
+    Tabla_Informe_MD_SOCA[i,8] <- round(sum(B_VAR_SOCA$`T*C`),0)
+    Tabla_Informe_MD_SOCA[i,9] <- round(Tabla_Informe_MD_SOCA[i,8]/Tabla_Informe_MD_SOCA[i,3],0)
+    Tabla_Informe_MD_SOCA[i,10] <- round(sum(B_VAR_SOCA$`T*E REAL`),0)
+    Tabla_Informe_MD_SOCA[i,11] <- round(Tabla_Informe_MD_SOCA[i,10]/Tabla_Informe_MD_SOCA[i,3],1)
+    Tabla_Informe_MD_SOCA[i,12] <- round(Tabla_Informe_MD_SOCA[i,5]/Tabla_Informe_MD_SOCA[i,11],1)
+    Tabla_Informe_MD_SOCA[i,13] <- round(round(Tabla_Informe_MD_SOCA[i,2]/Tabla_Informe_MD_SOCA[i,3],1)*round(Tabla_Informe_MD_SOCA[i,5]/Tabla_Informe_MD_SOCA[i,11],1)/100,1)
+  }
+  
+  colnames(Tabla_Informe_MD_SOCA) <- c("Variedad","T*RDTO","TON REALES", "ÁREA",
+                                       "T.C.H.", "RDTO(%)", "TAH", "T*CORTE",
+                                       "CORTE", "T*E REAL", "EDAD", "TCHM", "TAHM")
+  ## ____________ FIN PARA MANEJO DIRECTO SOCA CON CADA VARIEDAD ________________ ##
+  
+  TENENCIA_SOCA <- subset(B_HCAS_INT_SOCA, TENENCIA %in% c("1.Agricola","2.Manejo Directo","3.Proveedor"))
+  VARIEDADES_TENENCIA_SOCA <- unique(TENENCIA_SOCA$VARIEDAD)
+  
+  Tabla_Informe_Tend_SOCA <- matrix(data = NA, nrow = length(VARIEDADES_TENENCIA_SOCA),ncol = 13)
+  Tabla_Informe_Tend_SOCA <- as.data.frame(Tabla_Informe_Tend_SOCA)
+  for (i in 1:length(VARIEDADES_TENENCIA_SOCA)) {
+    
+    B_VAR_MD_TEND <- subset(TENENCIA_SOCA, VARIEDAD == VARIEDADES_TENENCIA_SOCA[i])
+    # __ #  |  TABLA PARA LA VARIEDAD DE MANEJO DIRECTO SOCA  |  # __ #
+    
+    Tabla_Informe_Tend_SOCA[i,1] <- VARIEDADES_TENENCIA_SOCA[i] # AQUI DEBE IR i
+    Tabla_Informe_Tend_SOCA[i,2] <- round(sum(B_VAR_MD_TEND$`T*rdto`),0)
+    Tabla_Informe_Tend_SOCA[i,3] <- round(sum(B_VAR_MD_TEND$`TONS REAL`),0)
+    Tabla_Informe_Tend_SOCA[i,4] <- round(sum(B_VAR_MD_TEND$AREA),2)
+    Tabla_Informe_Tend_SOCA[i,5] <- round(Tabla_Informe_Tend_SOCA[i,3]/Tabla_Informe_Tend_SOCA[i,4],0)
+    Tabla_Informe_Tend_SOCA[i,6] <- round(Tabla_Informe_Tend_SOCA[i,2]/Tabla_Informe_Tend_SOCA[i,3],1)
+    Tabla_Informe_Tend_SOCA[i,7] <- round((Tabla_Informe_Tend_SOCA[i,5]*Tabla_Informe_Tend_SOCA[i,6])/100,2)
+    Tabla_Informe_Tend_SOCA[i,8] <- round(sum(B_VAR_MD_TEND$`T*C`),0)
+    Tabla_Informe_Tend_SOCA[i,9] <- round(Tabla_Informe_Tend_SOCA[i,8]/Tabla_Informe_Tend_SOCA[i,3],0)
+    Tabla_Informe_Tend_SOCA[i,10] <- round(sum(B_VAR_MD_TEND$`T*E REAL`),0)
+    Tabla_Informe_Tend_SOCA[i,11] <- round(Tabla_Informe_Tend_SOCA[i,10]/Tabla_Informe_Tend_SOCA[i,3],1)
+    Tabla_Informe_Tend_SOCA[i,12] <- round(Tabla_Informe_Tend_SOCA[i,5]/Tabla_Informe_Tend_SOCA[i,11],1)
+    Tabla_Informe_Tend_SOCA[i,13] <- round(round(Tabla_Informe_Tend_SOCA[i,2]/Tabla_Informe_Tend_SOCA[i,3],1)*round(Tabla_Informe_Tend_SOCA[i,5]/Tabla_Informe_Tend_SOCA[i,11],1)/100,1)
+  }
+  
+  colnames(Tabla_Informe_Tend_SOCA) <- c("Variedad","T*RDTO","TON REALES", "ÁREA",
+                                       "T.C.H.", "RDTO(%)", "TAH", "T*CORTE",
+                                       "CORTE", "T*E REAL", "EDAD", "TCHM", "TAHM")
+  
+  ## ______________________________ FIN DE LA TENENCIA SOCA ___________________________ ##
+  
+  MD_PLANTILLA <- subset(B_HCAS_INT_PLANTILLA, TENENCIA == "2.Manejo Directo")
+  VARIEDADES_MD_PLANTILLA <- unique(MD_PLANTILLA$VARIEDAD)
+  
+  
+  Tabla_Informe_MD_PLANT <- matrix(data = NA, nrow = length(VARIEDADES_MD_PLANTILLA),ncol = 13)
+  Tabla_Informe_MD_PLANT <- as.data.frame(Tabla_Informe_MD_PLANT)
+  for (i in 1:length(VARIEDADES_MD_PLANTILLA)) {
+    
+    B_VAR_MD_PLANT <- subset(MD_PLANTILLA, VARIEDAD == VARIEDADES_MD_PLANTILLA[i])
+    # __ #  |  TABLA PARA LA VARIEDAD DE MANEJO DIRECTO SOCA  |  # __ #
+    
+    Tabla_Informe_MD_PLANT[i,1] <- VARIEDADES_MD_PLANTILLA[i] # AQUI DEBE IR i
+    Tabla_Informe_MD_PLANT[i,2] <- round(sum(B_VAR_MD_PLANT$`T*rdto`),0)
+    Tabla_Informe_MD_PLANT[i,3] <- round(sum(B_VAR_MD_PLANT$`TONS REAL`),0)
+    Tabla_Informe_MD_PLANT[i,4] <- round(sum(B_VAR_MD_PLANT$AREA),2)
+    Tabla_Informe_MD_PLANT[i,5] <- round(Tabla_Informe_MD_PLANT[i,3]/Tabla_Informe_MD_PLANT[i,4],0)
+    Tabla_Informe_MD_PLANT[i,6] <- round(Tabla_Informe_MD_PLANT[i,2]/Tabla_Informe_MD_PLANT[i,3],1)
+    Tabla_Informe_MD_PLANT[i,7] <- round((Tabla_Informe_MD_PLANT[i,5]*Tabla_Informe_MD_PLANT[i,6])/100,2)
+    Tabla_Informe_MD_PLANT[i,8] <- round(sum(B_VAR_MD_PLANT$`T*C`),0)
+    Tabla_Informe_MD_PLANT[i,9] <- round(Tabla_Informe_MD_PLANT[i,8]/Tabla_Informe_MD_PLANT[i,3],0)
+    Tabla_Informe_MD_PLANT[i,10] <- round(sum(B_VAR_MD_PLANT$`T*E REAL`),0)
+    Tabla_Informe_MD_PLANT[i,11] <- round(Tabla_Informe_MD_PLANT[i,10]/Tabla_Informe_MD_PLANT[i,3],1)
+    Tabla_Informe_MD_PLANT[i,12] <- round(Tabla_Informe_MD_PLANT[i,5]/Tabla_Informe_MD_PLANT[i,11],1)
+    Tabla_Informe_MD_PLANT[i,13] <- round(round(Tabla_Informe_MD_PLANT[i,2]/Tabla_Informe_MD_PLANT[i,3],1)*round(Tabla_Informe_MD_PLANT[i,5]/Tabla_Informe_MD_PLANT[i,11],1)/100,1)
+  }
+  
+  colnames(Tabla_Informe_MD_PLANT) <- c("Variedad","T*RDTO","TON REALES", "ÁREA",
+                                         "T.C.H.", "RDTO(%)", "TAH", "T*CORTE",
+                                         "CORTE", "T*E REAL", "EDAD", "TCHM", "TAHM")
+  
+  ###________________________ FIN PARA PLANTILLA DE MANEJO DIRECTO ____________________ ##
+  
+  TENENCIA_PLANTILLA <- subset(B_HCAS_INT_PLANTILLA, TENENCIA %in% c("1.Agricola","2.Manejo Directo","3.Proveedor"))
+  VARIEDADES_TENENCIA_PLANTILLA <- unique(TENENCIA_PLANTILLA$VARIEDAD)
+  
+  Tabla_Informe_TEND_PLANT <- matrix(data = NA, nrow = length(VARIEDADES_TENENCIA_PLANTILLA),ncol = 13)
+  Tabla_Informe_TEND_PLANT <- as.data.frame(Tabla_Informe_TEND_PLANT)
+  for (i in 1:length(VARIEDADES_TENENCIA_PLANTILLA)) {
+    
+    B_VAR_TEND_PLANT <- subset(TENENCIA_PLANTILLA, VARIEDAD == VARIEDADES_TENENCIA_PLANTILLA[i])
+    # __ #  |  TABLA PARA LA VARIEDAD DE MANEJO DIRECTO SOCA  |  # __ #
+    
+    Tabla_Informe_TEND_PLANT[i,1] <- VARIEDADES_TENENCIA_PLANTILLA[i] # AQUI DEBE IR i
+    Tabla_Informe_TEND_PLANT[i,2] <- round(sum(B_VAR_TEND_PLANT$`T*rdto`),0)
+    Tabla_Informe_TEND_PLANT[i,3] <- round(sum(B_VAR_TEND_PLANT$`TONS REAL`),0)
+    Tabla_Informe_TEND_PLANT[i,4] <- round(sum(B_VAR_TEND_PLANT$AREA),2)
+    Tabla_Informe_TEND_PLANT[i,5] <- round(Tabla_Informe_TEND_PLANT[i,3]/Tabla_Informe_TEND_PLANT[i,4],0)
+    Tabla_Informe_TEND_PLANT[i,6] <- round(Tabla_Informe_TEND_PLANT[i,2]/Tabla_Informe_TEND_PLANT[i,3],1)
+    Tabla_Informe_TEND_PLANT[i,7] <- round((Tabla_Informe_TEND_PLANT[i,5]*Tabla_Informe_TEND_PLANT[i,6])/100,2)
+    Tabla_Informe_TEND_PLANT[i,8] <- round(sum(B_VAR_TEND_PLANT$`T*C`),0)
+    Tabla_Informe_TEND_PLANT[i,9] <- round(Tabla_Informe_TEND_PLANT[i,8]/Tabla_Informe_TEND_PLANT[i,3],0)
+    Tabla_Informe_TEND_PLANT[i,10] <- round(sum(B_VAR_TEND_PLANT$`T*E REAL`),0)
+    Tabla_Informe_TEND_PLANT[i,11] <- round(Tabla_Informe_TEND_PLANT[i,10]/Tabla_Informe_TEND_PLANT[i,3],1)
+    Tabla_Informe_TEND_PLANT[i,12] <- round(Tabla_Informe_TEND_PLANT[i,5]/Tabla_Informe_TEND_PLANT[i,11],1)
+    Tabla_Informe_TEND_PLANT[i,13] <- round(round(Tabla_Informe_TEND_PLANT[i,2]/Tabla_Informe_TEND_PLANT[i,3],1)*round(Tabla_Informe_TEND_PLANT[i,5]/Tabla_Informe_TEND_PLANT[i,11],1)/100,1)
+  }
+  
+  colnames(Tabla_Informe_TEND_PLANT) <- c("Variedad","T*RDTO","TON REALES", "ÁREA",
+                                          "T.C.H.", "RDTO(%)", "TAH", "T*CORTE",
+                                          "CORTE", "T*E REAL", "EDAD", "TCHM", "TAHM")
+  
+  
+  Tabla_Informe_MD_SOCA  <- Tabla_Informe_MD_SOCA %>% gt() |>
+    tab_header(
+      title = md(paste("Producción por Variedades: ", fa("leaf"))),
+      subtitle = "SOCA PARA MANEJO DIRECTO") |>
+    data_color(
+      palette = "#F0FFFF") |> 
+    opt_stylize(style = 6, color = "red") |>
+    tab_style(
+      style = list(
+        cell_fill(color = "#F0FFFF"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                         `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+    ) |>
+    tab_style(
+      style = list(
+        cell_fill(color = "gray70"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = Variedad)
+    ) |>
+    tab_style(
+      style = cell_fill(color = "gray98"),
+      locations = cells_title()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    cols_align(align = "center", columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                             `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+  
+  #### VOLVER TABLAS BONITAS CON GT SOCA PARA TENENCIA ####
+  
+  Tabla_Informe_Tend_SOCA  <- Tabla_Informe_Tend_SOCA %>% gt() |>
+    tab_header(
+      title = md(paste("Producción por Variedad: ", fa("leaf"))),
+      subtitle = "SOCA PARA TENENCIA") |>
+    data_color(
+      palette = "#F0FFFF") |> 
+    opt_stylize(style = 6, color = "red") |>
+    tab_style(
+      style = list(
+        cell_fill(color = "#F0FFFF"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                         `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+    ) |>
+    tab_style(
+      style = list(
+        cell_fill(color = "gray70"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = Variedad)
+    ) |>
+    tab_style(
+      style = cell_fill(color = "gray98"),
+      locations = cells_title()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    cols_align(align = "center", columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                             `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+  
+  #### FIN DE VOLVER TABLAS BONITAS CON GT SOCA PARA TENENCIA ####
+  
+  
+  
+  #### VOLVER TABLAS BONITAS CON GT PLANTILLA PARA MANEJO DIRECTO ####
+  
+  Tabla_Informe_MD_PLANT  <- Tabla_Informe_MD_PLANT %>% gt() |>
+    tab_header(
+      title = md(paste("Producción por Variedad: ", fa("leaf"))),
+      subtitle = "PLANTILLA PARA MANEJO DIRECTO") %>%
+    tab_style(
+      style = cell_fill(color = 'grey'),
+      locations = cells_body(
+        columns = c(Variedad), 
+        rows = nrow(Tabla_Informe_MD_PLANT)
+      )) |>
+    opt_stylize(style = 6, color = "red") |>
+    tab_style(
+      style = list(
+        cell_fill(color = "#F0FFFF"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                         `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+    ) |>
+    tab_style(
+      style = list(
+        cell_fill(color = "gray70"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = Variedad)
+    ) |>
+    tab_style(
+      style = cell_fill(color = "gray98"),
+      locations = cells_title()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    cols_align(align = "center", columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                             `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+  
+  #### FIN DE VOLVER TABLAS BONITAS CON GT PLANTILLA PARA MANEJO DIRECTO ####
+  
+  
+  #### VOLVER TABLAS BONITAS CON GT PLANTILLA PARA TENENCIA ####
+  
+  Tabla_Informe_TEND_PLANT  <- Tabla_Informe_TEND_PLANT %>% gt() |>
+    tab_header(
+      title = md(paste("Producción por Variedad: ", fa("leaf"))),
+      subtitle = "PLANTILLA PARA TENENCIA") |>
+    tab_style(
+      style = cell_fill(color = 'grey'),
+      locations = cells_body(
+        columns = c(Variedad), 
+        rows = nrow(Tabla_Informe_TEND_PLANT)
+      )) |>
+    opt_stylize(style = 6, color = "red") |>
+    tab_style(
+      style = list(
+        cell_fill(color = "#F0FFFF"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                         `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+    ) |>
+    tab_style(
+      style = list(
+        cell_fill(color = "gray70"),
+        cell_borders(sides = c("l", "r"), color = "black", weight = px(1))
+      ),
+      locations = cells_body(columns = Variedad)
+    ) |>
+    tab_style(
+      style = cell_fill(color = "gray98"),
+      locations = cells_title()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    tab_style(
+      style = cell_text(
+        size = "smaller",
+        weight = "bold",
+        transform = "uppercase"
+      ),
+      locations = cells_stub()
+    ) |>
+    cols_align(align = "center", columns = c(Variedad,`T*RDTO`,`TON REALES`,T.C.H.,
+                                             `RDTO(%)`,TAH,`T*CORTE`,CORTE,`T*E REAL`,EDAD,TCHM,TAHM,ÁREA))
+  
+  #### FIN DE VOLVER TABLAS BONITAS CON GT PLANTILLA PARA TENENCIA ####
+  
+  
+  #### FIN DE VOLVER TABLAS BONITAS CON GT SOCA PARA MANEJO DIRECTO ####
+  return(list(Tabla_Informe_MD_SOCA,Tabla_Informe_Tend_SOCA,
+              Tabla_Informe_MD_PLANT,Tabla_Informe_TEND_PLANT))
+    
+}
+LISTA <- HISTORICO_CASTILLA_VARIEDADES(H_CAS,2023,5)
+LISTA[1]
+LISTA[2]
+LISTA[3]
+LISTA[4]
