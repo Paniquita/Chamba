@@ -1,0 +1,105 @@
+#####################################################################################
+###################    HACER EL HISTORICO DE LIBERACION MANUAL    ###################
+#####################################################################################
+
+## ______ LIBRERIAS _________ ##
+library(readxl)
+library(tidyr)
+library(lubridate)
+library(gt)
+## ______ FIN LIBRERIAS _________ ##
+
+##_________ LECTURA DE BASES __________ ##
+B_CHORRA <- read_excel("//ntcastilla/VA/Campo Castilla/Agronomia/LEGALIZACIONESYMATRICES/BASES/1. Barrenadores del tallo chorra/Matriz_Dig_Chorra 2021-2023 Actual-.xlsx", 
+                       sheet = "Eval_Barrenadores", na = " ", 
+                       skip = 10)
+B_LIBERACIÓN <- read_excel("//ntcastilla/VA/Campo Castilla/Agronomia/LEGALIZACIONESYMATRICES/BASES/3. Liberación de insectos Benéficos/Editar - Matriz_Dig_Liberación de insectos Benéficos.xlsx", 
+                           sheet = "Liberación Benéficos (Diatraea)", 
+                           skip = 4)
+##_________ FIN DE LECTURA DE BASES __________ ##
+
+B_CHORRA_MD <- subset(B_CHORRA, EMPRESA == "2.Manejo Directo")
+B_CHORRA_MD$Fecha <- as.Date(B_CHORRA_MD$Fecha)
+
+B_CHORRA_MD_OCT <- B_CHORRA_MD[B_CHORRA_MD$Fecha >= "2024-03-01" 
+                               & B_CHORRA_MD$Fecha <= "2024-03-31",] # Change date
+
+INTERES <- matrix(data = NA, nrow = nrow(B_CHORRA_MD_OCT), ncol = length(B_CHORRA_MD_OCT))
+INTERES <- as.data.frame(INTERES)
+
+for (i in 1:nrow(B_CHORRA_MD_OCT)) {
+  if(B_CHORRA_MD_OCT$`Intensidad de infestación...28`[i] > 3){INTERES[i,] <- B_CHORRA_MD_OCT[i,]}
+}
+
+INTERES <- INTERES %>% drop_na(V28)
+INTERES <- INTERES %>% drop_na(V16)   
+
+colnames(INTERES) <- c(colnames(B_CHORRA_MD_OCT))
+
+TABLA_INFORME <- matrix(data = NA, ncol = 7, nrow = nrow(INTERES)) 
+B_CHORRA_MD_C_ANTE <- subset(B_CHORRA_MD,AÑO == 2023) # Change Year
+TABLA_INFORME <- as.data.frame(TABLA_INFORME)
+DIF <- matrix(data = NA, nrow = 1, ncol = 15)
+TABLAS_LIBERACIONES <- list()
+DIFERENCIAS <- list()
+LIBERACIONES <- matrix(data = NA, ncol = 4, nrow = 15)
+LIBERACIONES <- as.data.frame(LIBERACIONES)
+
+TABLA_INFORME
+
+
+for (i in 1:nrow(INTERES)) {
+  TABLA_INFORME[i,1] <- INTERES$`SECTOR SUERTE`[[i]]
+  TABLA_INFORME[i,2] <- INTERES$HACIENDA[[i]]
+  TABLA_INFORME[i,3] <- round(INTERES$`EDAD DE CORTE`[[i]], digits = 1)
+  TABLA_INFORME[i,6] <- INTERES$Fecha[[i]]
+  TABLA_INFORME[i,7] <- INTERES$`Intensidad de infestación...28`[[i]]
+  DATOS_ANTERIORES <-  subset(B_CHORRA_MD_C_ANTE,`SECTOR SUERTE` == c(TABLA_INFORME[i,1]))
+  TABLA_INFORME[i,4] <- TABLA_INFORME[i,6]-(INTERES$`EDAD DE CORTE`[i]*(365/12))
+  
+  if(is.na(DATOS_ANTERIORES$`Intensidad de infestación...28`[1])){
+    TABLA_INFORME[i,5] <- 3.0
+  }
+  else(TABLA_INFORME[i,5] <- DATOS_ANTERIORES$`Intensidad de infestación...28`)
+  
+  TABLA_INFORME$V4 <- as.Date(TABLA_INFORME$V4)
+  TABLA_INFORME$V6 <- as.Date(TABLA_INFORME$V6)
+
+  LIB <- subset(B_LIBERACIÓN, `Sector - Suerte` == TABLA_INFORME[i,1])
+  LIB <- LIB[LIB$Fecha >= TABLA_INFORME[i,4] & 
+               LIB$Fecha <= TABLA_INFORME[i,6],]
+  
+  LIBERACIONES <- matrix(data = NA, ncol = 4, nrow = 15) #AUMENTO FILAS
+  LIBERACIONES <- as.data.frame(LIBERACIONES)
+  DIF <- matrix(data = NA, nrow = 1, ncol = 15) #AUMENTO FILAS
+  for (j in 1:nrow(LIB)) {
+    LIBERACIONES[j,1] <- as.Date(LIB$Fecha[j])
+    LIBERACIONES[j,2] <- LIB$`Sector - Suerte`[j]
+    LIBERACIONES[j,3] <- LIB$Insecto[j]
+    LIBERACIONES[j,4] <- round(LIB$cantidad[j],2)
+    LIBERACIONES[,1] <- as.Date(as.numeric(LIBERACIONES[,1]))
+    colnames(LIBERACIONES) <- c("Fecha", "Sector-Suerte","Insecto","Cantidad")
+    LIBERACIONES <- as.data.frame(LIBERACIONES)
+    LIBERACIONES <- LIBERACIONES %>% drop_na(Fecha)
+    DIF[1,j] <- interval(TABLA_INFORME[i,4], LIB$Fecha[j]) %/% days(1) / (365/12)
+  }
+  LIBERACIONES <- as.matrix(LIBERACIONES)
+  TABLAS_LIBERACIONES[[i]] <- LIBERACIONES
+  DIFERENCIAS[[i]] <- round(DIF,2)
+  DIFERENCIAS <- lapply(DIFERENCIAS, function(x) x[!is.na(x)])
+  # TABLA_INFORME$V4 <- as.Date(TABLA_INFORME$V4)
+  # TABLA_INFORME$V6 <- as.Date(TABLA_INFORME$V6)
+}
+
+colnames(TABLA_INFORME) <- c("UT","Hacienda","Edad Cosecha",
+                             "Fecha Eval. (Anterior)", "% de I. de I. (Anterior)",
+                             "Fecha Eval. (Actual)", "% de I. de I. (Actual)")
+TABLA_INFORME %>% gt()
+TABLAS_LIBERACIONES
+DIFERENCIAS
+
+#___________________________________________________________________________________#
+###_______________________________________________________________________________###
+##_______________##  FIN HACER EL HISTORICO DE LIBERACION MANUAL  ##_______________##
+##_________________________________________________________________________________##
+#___________________________________________________________________________________#
