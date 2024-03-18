@@ -33,16 +33,17 @@ for (i in 1:length(Años)) {
   Tabla_Temporal <- subset(La_Fria, AÑO == Años[i])
   
   for (j in 1:4) {
-    Meses_Datos <- subset(Tabla_Temporal, MES == Lista_Meses[[j]])
+    Meses_Datos <- subset(Tabla_Temporal, MES %in% Lista_Meses[[j]])
     Medias_Trimestrales[1,1] <- paste0(Trimestres[j]," ","-"," ",Años[i])
     Medias_Trimestrales[1,2] <- mean(Meses_Datos$T.C.H.)
     Medias_Completas <- bind_rows(Medias_Completas,Medias_Trimestrales)
   }
 }
+Medias_Completas <- Medias_Completas[-1,]
 Medias_Completas
 
 ##__| IMPUTACIÓN PARA DATOS FALTANTES DE LA SERIE (1 PARA ESTA SERIA) __ |#
-Time_Serie_LaFria <- ts(Medias_Completas$V2)
+Time_Serie_LaFria <- ts(Medias_Completas$V2, frequency = 4)
 KSSA_Serie <- kssa(Time_Serie_LaFria,start_methods = "all",
                    actual_methods = "all",
                    segments = 5,
@@ -80,8 +81,8 @@ Identificacion_Serie<- function(serie,p,q,P,Q,d,D){
     for(j in 0:q) {
       for(s in 0:P) {
         for(m in 0:Q) {
-          modelo=Arima(serie, order = c(i, d, j),
-                       seasonal = list(order = c(s, D, m)), method = c("CSS-ML"))
+          modelo=forecast::Arima(serie, order = c(i, d, j),
+                       seasonal = list(order = c(s, D, m)), method = c("CSS-ML"), include.mean = FALSE)
           
           numpar=length(coef(modelo))
           T=length(residuals(modelo))
@@ -116,9 +117,12 @@ Identificacion_Serie<- function(serie,p,q,P,Q,d,D){
 }
 
 ##__ | MODELO DE LA SERIE CON LA QUE SE VA MODELAR ___ |#
-Identificacion_Serie(Time_Serie_Imputada,3,3,1,1,1,1)
+# Identificacion_Serie(Time_Serie_Imputada,3,3,1,1,1,1)
+# -> 8.211771 cib serie 0 1 3 1 0 1
+Identificacion_Serie(Time_Serie_Imputada,3,3,0,0,1,0)
 
-Modelo_Serie <- Arima(Time_Serie_Imputada,order=c(0,1,1),seasonal = c(0,1,1))
+Modelo_Serie <- Arima(Time_Serie_Imputada,order=c(0,1,3),seasonal = c(1,0,1))
+
 checkresiduals(Modelo_Serie)
 white.test(Modelo_Serie$residuals)
 plot(forecast(Modelo_Serie,4))
@@ -129,7 +133,7 @@ Fechas_Trimestrales <- seq(ymd("2010-01-01"), ymd("2024-12-31"), by = "3 months"
 Series_Pronosticos <- data.frame(TCH=c(Data_Serie$`Promedio TCH`,Pronostico_2024$mean),Trimestres=Fechas_Trimestrales)
 
 #_| GRAFICOS CON LOS PRONOSTICOS _____ ##
-Prono <- ggplot(Series_Pronosticos,aes(x=Trimestres,y=round(TCH,0)))+geom_line()+geom_point()+theme_bw()+
+Prono <- ggplot(Series_Pronosticos,aes(x=Trimestres,y=round(TCH,1)))+geom_line()+geom_point()+theme_bw()+
   geom_vline(xintercept = as.Date('2024-01-01'), linetype = "dashed", color = "red")+
   labs(title = "Serie de Tiempo Trimestral con Pronosticos", x = "Trimestres", y = "Promedio de TCH")+
   annotate("text", size=4, x = as.Date("2024-01-01"), y = 70+30, label = "Pronósticos", vjust = -1, hjust = 0.5, color = "black", size = 4)
@@ -149,3 +153,102 @@ ggplotly(Prono)
 ggplotly(Serie2)
 Data_Serie
 round(MAPE(Modelo_Serie$fitted,Time_Serie_Imputada)*100,2)
+
+Serie_Pao<-ggplot(Data_Serie,aes(x=`Trimestre y Año`,y=`Promedio TCH`)) +
+  geom_line() + labs(title = "Serie de Tiempo Trimestral en La Fria") +
+  geom_point() + theme_bw()
+
+ggplotly(Serie_Pao)
+
+## || _____ SERIE DE TIEMPO PARA LA FINCA DE LOS RANCHOS _____________ | ####
+H_CAS <- read_excel("D:/900217/OneDrive - Riopaila Castilla/Escritorio/Historicos_Castilla_Desde_2010.xlsx", 
+                    sheet = "Base", skip = 6)
+H_CAS <- subset(H_CAS,`Ingenio Cosecha`== "Cas")
+H_CAS_MD <- subset(H_CAS,TENENCIA == "2.Manejo Directo")
+Hacienda_MD <- unique(H_CAS_MD$HACIENDA)
+Los_Ranchos <- subset(H_CAS,HACIENDA == "LOS RANCHOS")
+
+Lista_Meses <- list(c(1,2,3),c(4,5,6),c(7,8,9),c(10,11,12))
+Años <- c(2010:2023)
+Trimestres <- c("1er Trimestre","2do Trimestre","3er Trimestre","4to Trimestre")
+Datos_Inicio <- matrix(data = NA, nrow = 1,ncol = 2)
+Datos_Inicio <- as.data.frame(Datos_Inicio)
+Medias_Completas <- Datos_Inicio 
+
+for (i in 1:length(Años)) {
+  Medias_Trimestrales <- matrix(data = NA, nrow = 1, ncol = 2)
+  Medias_Trimestrales <- as.data.frame(Medias_Trimestrales)
+  Tabla_Temporal <- subset(Los_Ranchos, AÑO == Años[i])
+  
+  for (j in 1:4) {
+    Meses_Datos <- subset(Tabla_Temporal, MES %in% Lista_Meses[[j]])
+    Medias_Trimestrales[1,1] <- paste0(Trimestres[j]," ","-"," ",Años[i])
+    Medias_Trimestrales[1,2] <- mean(Meses_Datos$T.C.H.)
+    Medias_Completas <- bind_rows(Medias_Completas,Medias_Trimestrales)
+  }
+}
+Medias_Completas <- Medias_Completas[-1,]
+Medias_Completas
+
+##__| IMPUTACIÓN PARA DATOS FALTANTES DE LA SERIE (1 PARA ESTA SERIA) __ |#
+Time_Serie_LosRanchos <- ts(Medias_Completas$V2, frequency = 4)
+KSSA_Serie <- kssa(Time_Serie_LosRanchos,start_methods = "all",
+                   actual_methods = "all",
+                   segments = 5,
+                   iterations = 10,
+                   percentmd = 0.2, seed = 1234)
+KSSA_Serie[[5]]
+Fechas_Trimestrales <- seq(ymd("2010-01-01"), ymd("2023-12-31"), by = "3 months")
+Data_Serie_Ranchos <- data.frame(Fechas_Trimestrales,KSSA_Serie[[5]])
+colnames(Data_Serie_Ranchos) <- c("Trimestre y Año","Promedio TCH")
+
+##____| GRAFIQUITA MELA ___ | <.< #
+ggplot(Data_Serie_Ranchos,aes(x=`Trimestre y Año`,y=`Promedio TCH`))+
+  geom_line()+geom_point()+theme_bw()
+
+Time_Serie_Imputada_Rachos <- ts(Data_Serie_Ranchos$`Promedio TCH`, freq=4)
+plot(decompose(Time_Serie_Imputada_Rachos))
+
+
+Identificacion_Serie(Time_Serie_Imputada_Rachos,3,3,1,1,1,1)
+# Modelo_Serie_Ranchos <- Arima(Time_Serie_Imputada_Rachos,order=c(2,1,3),seasonal = c(0,0,0))
+Modelo_Serie_Ranchos <- Arima(Time_Serie_Imputada_Rachos,order=c(0,1,2),seasonal = c(0,1,1))
+
+checkresiduals(Modelo_Serie_Ranchos)
+white.test(Modelo_Serie_Ranchos$residuals)
+plot(forecast(Modelo_Serie_Ranchos,4))
+Pronostico_2024 <- forecast(Modelo_Serie_Ranchos,4)
+
+Fechas_Trimestrales <- seq(ymd("2010-01-01"), ymd("2024-12-31"), by = "3 months")
+
+Series_Pronosticos_Ranchos <- data.frame(TCH=c(Data_Serie_Ranchos$`Promedio TCH`,Pronostico_2024$mean),Trimestres=Fechas_Trimestrales)
+
+#_| GRAFICOS CON LOS PRONOSTICOS _____ ##
+Prono <- ggplot(Series_Pronosticos_Ranchos,aes(x=Trimestres,y=round(TCH,1)))+geom_line()+geom_point()+theme_bw()+
+  geom_vline(xintercept = as.Date('2024-01-01'), linetype = "dashed", color = "red")+
+  labs(title = "Serie de Tiempo Trimestral con Pronosticos", x = "Trimestres", y = "Promedio de TCH")+
+  annotate("text", size=4, x = as.Date("2024-01-01"), y = 70+30, label = "Pronósticos", vjust = -1, hjust = 0.5, color = "black", size = 4)
+
+# __ | VALIDACIÓN DATOS ATIPICOS ____ #|#
+sum(abs((Modelo_Serie_Ranchos$residuals-mean(Modelo_Serie_Ranchos$residuals))/sqrt(Modelo_Serie_Ranchos$sigma2))>3)
+# Ajuste serie
+Data_Serie_Ranchos$Ajuste <- Modelo_Serie_Ranchos$fitted
+
+Serie2<-ggplot(Data_Serie_Ranchos, aes(x = `Trimestre y Año`)) +
+  geom_line(aes(y = `Promedio TCH`, color = "TCH Promedio")) +
+  geom_point(aes(y = `Promedio TCH`, color = "TCH Promedio")) +
+  geom_line(aes(y = Ajuste, color = "SARIMA (0,1,1)(0,1,1)")) +
+  geom_point(aes(y = Ajuste, color = "SARIMA (0,1,1)(0,1,1)")) + theme_bw()
+
+ggplotly(Prono)
+ggplotly(Serie2)
+Data_Serie
+round(MAPE(Modelo_Serie$fitted,Time_Serie_Imputada)*100,2)
+
+Data_Serie_Ranchos$Sin_Imputar <- Medias_Completas$V2
+Serie_Pao<-ggplot(Data_Serie_Ranchos, aes(x = `Trimestre y Año`, y = `Promedio TCH`)) +
+  geom_line() + labs(title = "Serie de Tiempo Trimestral en Los Ranchos") +
+  geom_point() + theme_bw()
+
+ggplotly(Serie_Pao)
+
