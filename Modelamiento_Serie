@@ -1,0 +1,151 @@
+#_| SERIES DE TIEMPO PARA LA FRIA CON PROMEDIO TCH DESDE 2010 AGRUPADO EN TRIMESTRES ______________ ####
+
+#__| LIBRERIAS ____ ##
+library(forecast)
+library(tseries)
+library(kssa)
+library(stats)
+library(TSA)
+library(writexl)
+library(readxl)
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+library(plotly)
+library(MLmetrics)
+
+## >>| LECTURA BASE DE DATOS Y FILTROS BASICOS PARA CASTILLA Y LA FINCA DE INTERES ___ ##
+H_CAS <- read_excel("D:/900217/OneDrive - Riopaila Castilla/Escritorio/Historicos_Castilla_Desde_2010.xlsx", 
+                    sheet = "Base", skip = 6)
+H_CAS <- subset(H_CAS,`Ingenio Cosecha`== "Cas")
+La_Fria <- subset(H_CAS,HACIENDA == "LA FRIA")
+
+Lista_Meses <- list(c(1,2,3),c(4,5,6),c(7,8,9),c(10,11,12))
+Años <- c(2010:2023)
+Trimestres <- c("1er Trimestre","2do Trimestre","3er Trimestre","4to Trimestre")
+Datos_Inicio <- matrix(data = NA, nrow = 1,ncol = 2)
+Datos_Inicio <- as.data.frame(Datos_Inicio)
+Medias_Completas <- Datos_Inicio 
+
+for (i in 1:length(Años)) {
+  Medias_Trimestrales <- matrix(data = NA, nrow = 1, ncol = 2)
+  Medias_Trimestrales <- as.data.frame(Medias_Trimestrales)
+  Tabla_Temporal <- subset(La_Fria, AÑO == Años[i])
+  
+  for (j in 1:4) {
+    Meses_Datos <- subset(Tabla_Temporal, MES == Lista_Meses[[j]])
+    Medias_Trimestrales[1,1] <- paste0(Trimestres[j]," ","-"," ",Años[i])
+    Medias_Trimestrales[1,2] <- mean(Meses_Datos$T.C.H.)
+    Medias_Completas <- bind_rows(Medias_Completas,Medias_Trimestrales)
+  }
+}
+Medias_Completas
+
+##__| IMPUTACIÓN PARA DATOS FALTANTES DE LA SERIE (1 PARA ESTA SERIA) __ |#
+Time_Serie_LaFria <- ts(Medias_Completas$V2)
+KSSA_Serie <- kssa(Time_Serie_LaFria,start_methods = "all",
+                   actual_methods = "all",
+                   segments = 5,
+                   iterations = 10,
+                   percentmd = 0.2, seed = 1234)
+KSSA_Serie[[5]]
+Fechas_Trimestrales <- seq(ymd("2010-01-01"), ymd("2023-12-31"), by = "3 months")
+Data_Serie <- data.frame(Fechas_Trimestrales,KSSA_Serie[[5]])
+colnames(Data_Serie) <- c("Trimestre y Año","Promedio TCH")
+
+##____| GRAFIQUITA MELA ___ | <.< #
+ggplot(Data_Serie,aes(x=`Trimestre y Año`,y=`Promedio TCH`))+
+  geom_line()+geom_point()+theme_bw()
+
+Time_Serie_Imputada <- ts(Data_Serie$`Promedio TCH`, freq=4)
+plot(decompose(Time_Serie_Imputada))
+
+## _ | FUNCION PARA DETERMINAR MODELO DE LA SERIE __ #|#
+Identificacion_Serie<- function(serie,p,q,P,Q,d,D){
+  # seleccion del modelos usando citerios de informacion
+  # entre los ordenes maximos de los polinomios
+  p=p
+  q=q
+  P=P
+  Q=Q
+  
+  # entre los ordenes de diferenciacion
+  d=d
+  D=D
+  (maxfilas=(p+1)*(q+1)*(P+1)*(Q+1))
+  ic_mod=matrix(rep(-99, times=maxfilas*6), nrow=maxfilas, ncol=6)
+  
+  k=1
+  for(i in 0:p) {
+    for(j in 0:q) {
+      for(s in 0:P) {
+        for(m in 0:Q) {
+          modelo=Arima(serie, order = c(i, d, j),
+                       seasonal = list(order = c(s, D, m)), method = c("CSS-ML"))
+          
+          numpar=length(coef(modelo))
+          T=length(residuals(modelo))
+          ic_mod[k,1]=i
+          ic_mod[k,2]=j
+          ic_mod[k,3]=s
+          ic_mod[k,4]=m
+          ic_mod[k,5]=-2*(modelo$loglik/T)+(2*numpar)/T       # AIC
+          ic_mod[k,6]=-2*(modelo$loglik/T)+(numpar*log(T))/T  # SIC
+          k=k+1
+        }
+      }
+    }
+  }
+  p_=ic_mod[,1]
+  q_=ic_mod[,2]
+  P_=ic_mod[,3]
+  Q_=ic_mod[,4]
+  AIC=ic_mod[,5]
+  SIC=ic_mod[,6]
+  
+  # tabla con ordenes de los modelos ajustados y los criterios de informacion
+  # ---------------------------------------------------------------------------
+  (Crit_Inf=data.frame(p_, q_, P_, Q_, AIC, SIC))
+  plot(Crit_Inf$AIC,pch=19,type='b')
+  # Grafico del numero del modelo contra el criterio de informacion
+  mod_num=c(1:maxfilas)
+  Valor<-((1:maxfilas)[which((Crit_Inf$AIC)==min(Crit_Inf$AIC))])
+  Orden<- c(Crit_Inf[Valor,1],d,Crit_Inf[Valor,2],Crit_Inf[Valor,3],D,Crit_Inf[Valor,4])
+  print(Crit_Inf)
+  return(Orden)
+}
+
+##__ | MODELO DE LA SERIE CON LA QUE SE VA MODELAR ___ |#
+Identificacion_Serie(Time_Serie_Imputada,3,3,1,1,1,1)
+
+Modelo_Serie <- Arima(Time_Serie_Imputada,order=c(0,1,1),seasonal = c(0,1,1))
+checkresiduals(Modelo_Serie)
+white.test(Modelo_Serie$residuals)
+plot(forecast(Modelo_Serie,4))
+Pronostico_2024 <- forecast(Modelo_Serie,4)
+
+Fechas_Trimestrales <- seq(ymd("2010-01-01"), ymd("2024-12-31"), by = "3 months")
+
+Series_Pronosticos <- data.frame(TCH=c(Data_Serie$`Promedio TCH`,Pronostico_2024$mean),Trimestres=Fechas_Trimestrales)
+
+#_| GRAFICOS CON LOS PRONOSTICOS _____ ##
+Prono <- ggplot(Series_Pronosticos,aes(x=Trimestres,y=round(TCH,0)))+geom_line()+geom_point()+theme_bw()+
+  geom_vline(xintercept = as.Date('2024-01-01'), linetype = "dashed", color = "red")+
+  labs(title = "Serie de Tiempo Trimestral con Pronosticos", x = "Trimestres", y = "Promedio de TCH")+
+  annotate("text", size=4, x = as.Date("2024-01-01"), y = 70+30, label = "Pronósticos", vjust = -1, hjust = 0.5, color = "black", size = 4)
+
+# __ | VALIDACIÓN DATOS ATIPICOS ____ #|#
+sum(abs((Modelo_Serie$residuals-mean(Modelo_Serie$residuals))/sqrt(Modelo_Serie$sigma2))>3)
+# Ajuste serie
+Data_Serie$Ajuste <- Modelo_Serie$fitted
+
+Serie2<-ggplot(Data_Serie, aes(x = `Trimestre y Año`)) +
+  geom_line(aes(y = `Promedio TCH`, color = "TCH Promedio")) +
+  geom_point(aes(y = `Promedio TCH`, color = "TCH Promedio")) +
+  geom_line(aes(y = Ajuste, color = "SARIMA (0,1,1)(0,1,1)")) +
+  geom_point(aes(y = Ajuste, color = "SARIMA (0,1,1)(0,1,1)")) + theme_bw()
+
+ggplotly(Prono)
+ggplotly(Serie2)
+Data_Serie
+round(MAPE(Modelo_Serie$fitted,Time_Serie_Imputada)*100,2)
