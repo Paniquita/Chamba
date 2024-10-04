@@ -1,0 +1,334 @@
+## ______________________________________________________________________________________________##
+# > MISMA SERIE DE SERVIENTREGA CON LUNES COMPILADOS _________________________________________ ####
+## ______________________________________________________________________________________________##
+Librerias <- c("stats","forecast","tseries","kssa","TSA","writexl","readxl","dplyr",
+               "lubridate","ggplot2","plotly","MLmetrics","imputeTS")
+easypackages::packages(Librerias)
+rm(Librerias)
+Serie_Servientrega <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Serie_Servientrega.xlsx", 
+                                 sheet = "SERVIENTREGA_LUNES_COMPILADOS")
+
+Serie_Servientrega <- na.omit(Serie_Servientrega)
+Serie_Servientrega$Orden <- seq(1:length(Serie_Servientrega$Fecha))
+
+# PROCESO PARA IDENTIFICAR LA APARICIÓN DE FESTIVOS O PUNTOS INFLUYENTES EN MI SERIE _____ ##
+Plot_Festivos <- ggplot(Serie_Servientrega, aes(x = Orden, y = Valor)) + geom_point() + geom_line() + theme_bw()
+ggplotly(Plot_Festivos)
+ 
+Festivos <- c(1,62,65,89,97,112,117,132,159,167) # SE PONEN "NA" PARA LUEGO IMPUTARLOS MEDIANTE KSSA (Algoritmo Sub-Secuencias Conocidas)
+for(i in 1:length(Festivos)){
+  Serie_Servientrega$Valor[Festivos[i]] <- NA
+}
+
+# VISUALIZAR LOS DATOS QUE QUEDARON NA EN LA SERIE ___ ##
+Grafica <-ggplot(Serie_Servientrega,aes(x = Fecha, y = Valor))+ geom_line()+geom_point()+theme_bw()
+ggplotly(Grafica)
+
+# SE CONVIERTEN LOS DATOS EN UN VECTOR TIPO: TIME-SERIE PARA HACER LA IMPUTACION ______ ##
+TimeSerie_Servi <- ts(Serie_Servientrega$Valor, frequency = 5)
+KSSA_Serie <- kssa(TimeSerie_Servi,start_methods = "all",actual_methods = "all",segments = 5,
+                   percentmd = 0.2, seed = 1234)
+KSSA_Serie[[5]] # VECTOR DE DATOS, QUE CONTIENE LA SERIE SIN NA ______ ##
+
+# SE REESCRIBE LA SERIE PARA TRABAJARLA COMO DATA FRAME _________ ##
+Serie_Completa <- data.frame(Serie_Servientrega$Fecha,KSSA_Serie[[5]],Serie_Servientrega$Orden)
+colnames(Serie_Completa) <- c("Fecha","Valores","Orden")
+
+Plot_Servi_Impu <- ggplot(Serie_Completa, aes(x=Fecha,y=Valores))+geom_line()+geom_point()+theme_bw()
+Plot_Servi_Impu <- ggplot(Serie_Completa, aes(x=Orden,y=Valores))+geom_line()+geom_point()+theme_bw()
+
+ggplotly(Plot_Servi_Impu)
+
+#ggplot(Serie_Servientrega, aes(x=Fecha,y=Valor))+geom_line()+geom_point()+theme_bw()
+
+Serie_Imputada <- ts(Serie_Completa$Valores,frequency = 5)
+#Serie_Imputada <- ts(Serie_Completa$Valores,frequency = 5)
+
+# Serie_Completa$Valores[1:(length(Serie_Completa$Valores)-5)]
+## _ | FUNCION PARA DETERMINAR MODELO DE LA SERIE __ #|#
+Identificacion_Serie<- function(serie,p,q,P,Q,d,D){
+  # seleccion del modelos usando citerios de informacion
+  # entre los ordenes maximos de los polinomios
+  p=p
+  q=q
+  P=P
+  Q=Q
+  
+  # entre los ordenes de diferenciacion
+  d=d
+  D=D
+  (maxfilas=(p+1)*(q+1)*(P+1)*(Q+1))
+  ic_mod=matrix(rep(-99, times=maxfilas*6), nrow=maxfilas, ncol=6)
+  
+  k=1
+  for(i in 0:p) {
+    for(j in 0:q) {
+      for(s in 0:P) {
+        for(m in 0:Q) {
+          modelo=forecast::Arima(serie, order = c(i, d, j),
+                                 seasonal = list(order = c(s, D, m)), method = c("CSS-ML"), include.mean = FALSE)
+          
+          numpar=length(coef(modelo))
+          T=length(residuals(modelo))
+          ic_mod[k,1]=i
+          ic_mod[k,2]=j
+          ic_mod[k,3]=s
+          ic_mod[k,4]=m
+          ic_mod[k,5]=-2*(modelo$loglik/T)+(2*numpar)/T       # AIC
+          ic_mod[k,6]=-2*(modelo$loglik/T)+(numpar*log(T))/T  # SIC
+          k=k+1
+        }
+      }
+    }
+  }
+  p_=ic_mod[,1]
+  q_=ic_mod[,2]
+  P_=ic_mod[,3]
+  Q_=ic_mod[,4]
+  AIC=ic_mod[,5]
+  SIC=ic_mod[,6]
+  
+  # tabla con ordenes de los modelos ajustados y los criterios de informacion
+  # ---------------------------------------------------------------------------
+  (Crit_Inf=data.frame(p_, q_, P_, Q_, AIC, SIC))
+  plot(Crit_Inf$AIC,pch=19,type='b')
+  # Grafico del numero del modelo contra el criterio de informacion
+  mod_num=c(1:maxfilas)
+  Valor<-((1:maxfilas)[which((Crit_Inf$AIC)==min(Crit_Inf$AIC))])
+  Orden<- c(Crit_Inf[Valor,1],d,Crit_Inf[Valor,2],Crit_Inf[Valor,3],D,Crit_Inf[Valor,4])
+  print(Crit_Inf)
+  return(Orden)
+}
+Identificacion_Serie(Serie_Imputada,3,3,1,1,1,1)
+# First_Ts 2 1 3 0 1 0
+# Second_Ts 1 1 3 0 1 0
+# Thirty_Ts 1 1 1 0 1 1
+# A.A 1 0 0 2 1 0
+plot(decompose(Serie_Imputada))
+acf(diff(Serie_Imputada), lag.max = 80)
+pacf(diff(Serie_Imputada), lag.max = 40)
+adf.test(Serie_Imputada, alternative = "stationary")
+
+
+auto.arima(Serie_Imputada)
+
+# Modelo_Serie <- Arima(Serie_Imputada,order=c(2,1,3),seasonal = c(0,1,0)) # <- PRIMER MODELO, PRONOSTICOS DEL 9-13 DE SEPTIEMBRE
+Modelo_Serie <- Arima(Serie_Imputada,order=c(2,1,1),seasonal = c(0,1,1)) # IDENTIFICADOR
+Modelo_Serie <- Arima(Serie_Imputada,order=c(1,0,0),seasonal = c(1,1,1)) # AUTO
+Modelo_Serie <- Arima(Serie_Imputada,order=c(1,1,1),seasonal = c(0,1,1)) # SEMANA 23-27
+
+
+Box.test(residuals(Modelo_Serie), type = "Ljung-Box")
+forecast(Modelo_Serie,5)
+Pronos_SV <- forecast(Modelo_Serie,5)
+Pronos_SV$method
+#Pronos_SV$mean[4] <- Pronos_SV$mean[3]+20000000 
+# Pronos$mean[5] <- Pronos$mean[5]+30000000
+checkresiduals(Modelo_Serie)
+white.test(Modelo_Serie$residuals)
+plot(forecast(Modelo_Serie,5))
+summary(Modelo_Serie)
+sum(abs((Modelo_Serie$residuals-mean(Modelo_Serie$residuals))/sqrt(Modelo_Serie$sigma2))>3)
+tsdiag(Modelo_Serie)
+acf(residuals(Modelo_Serie))
+pacf(residuals(Modelo_Serie))
+
+
+res_est_w1=residuals(Modelo_Serie)/(Modelo_Serie$sigma2^.5)  # estandarización de los residuales
+plot.ts(res_est_w1)
+ind=(abs(res_est_w1)>3)
+(grupo=cbind(res_est_w1, ind, seq(1:length(ind))))
+
+# ________________________________________________________________________________ #
+
+# Serie_Envia <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Serie_Servientrega.xlsx", 
+#                                 sheet = "ENVIA")
+
+Serie_Envia <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Envia_Ciclico.xlsx")
+# Serie_Envia <- na.omit(Serie_Envia)
+Sys.setlocale("LC_TIME", "C")
+Serie_Envia$FECHA <- as.Date(strptime(Serie_Envia$FECHA,"%A, %B %d, %Y"))
+plot(Serie_Envia$FECHA,Serie_Envia$VALOR, type = "o", pch = 16)
+
+Plot_Envia <- ggplot(Serie_Envia, aes(x = FECHA, y = VALOR)) + geom_point() + geom_line() + theme_bw()
+ggplotly(Plot_Envia)
+
+Ts_Envia <- ts(Serie_Envia$VALOR, frequency = 5)
+KSSA_Serie <- kssa(Ts_Envia,start_methods = "all",actual_methods = "all",segments = 5,
+                   percentmd = 0.2, seed = 1234)
+Ts_Envia <- ts(KSSA_Serie[[5]], frequency = 5)
+
+Identificacion_Serie(Ts_Envia,3,3,2,2,1,1)
+# auto.arima(Ts_Envia)
+acf(diff(Ts_Envia))
+acf(Ts_Envia)
+pacf(Ts_Envia)
+pacf(diff(Ts_Envia))
+adf.test(diff(Ts_Envia), alternative = "stationary")
+# jarque.bera.test(residuals(Modelo_Envia))
+# Serie_Envia$VALOR <- c(Ts_Envia)
+Modelo_Envia <- Arima(Ts_Envia, order = c(2,1,3), seasonal = c(1,1,1)) # MODELO PARA LA SEMANA DEL 9-13 | 23-27 DE SEPTIEMBRE USADO
+Modelo_Envia <- Arima(Ts_Envia, order = c(0,1,1), seasonal = c(2,1,2)) # MODEO PARA LA SEMANA DEL 16-20 DE SEPTIEMBRE
+Modelo_Envia <- Arima(Ts_Envia, order = c(0,1,1), seasonal = c(2,1,2)) # MODEO PARA LA SEMANA DEL 23-27 DE SEPTIEMBRE
+Modelo_Envia <- Arima(Ts_Envia, order = c(0,1,1), seasonal = c(2,1,2)) # MODEO PARA LA SEMANA DEL 30-04 DE SEP|OCT
+
+checkresiduals(Modelo_Envia$residuals)
+white.test(Modelo_Envia$residuals)
+shapiro.test(Modelo_Envia$residuals)
+hist(Modelo_Envia$residuals)
+
+summary(Modelo_Envia)
+
+Pronos_EV <- forecast(Modelo_Envia,5)
+Pronos_EV$mean[2] <- Pronos_EV$mean[2]+40000000 # PROBANDO
+
+sum(abs((Modelo_Envia$residuals-mean(Modelo_Envia$residuals))/sqrt(Modelo_Envia$sigma2))>3)
+plot(forecast(Modelo_Envia,5))
+round(MAPE(Modelo_Envia$fitted,Ts_Envia)*100,2)
+# 1566443384 <-
+# ________________________________________________________________________________ #
+
+Serie_TCC <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Serie_Servientrega.xlsx", 
+                        sheet = "TCC")
+Serie_TCC$FECHA
+Sys.setlocale("LC_TIME", "C")
+Serie_TCC$FECHA <- as.Date(strptime(Serie_TCC$FECHA,"%A, %B %d, %Y"))
+Sys.setlocale("LC_TIME", "")
+plot(Serie_TCC$FECHA,Serie_TCC$VALOR, type = "o", pch = 16)
+
+Plot_TCC <- ggplot(Serie_TCC, aes(x = FECHA, y = VALOR)) + geom_point() + geom_line() + theme_bw()
+ggplotly(Plot_TCC)
+
+Ts_TCC <- ts(Serie_TCC$VALOR, frequency = 2)
+Identificacion_Serie(Ts_TCC,3,3,0,0,1,1)
+# 2,1,2,0,1,0
+acf(Ts_TCC)
+acf(diff(Ts_TCC))
+pacf(Ts_TCC)
+pacf(diff(Ts_TCC))
+
+
+Modelo_TCC <- Arima(Ts_TCC, order = c(1,1,3), seasonal = c(0,1,0))
+Modelo_TCC <- Arima(Ts_TCC, order = c(1,1,2), seasonal = c(0,1,0)) # SERIE DEL 16-20 SEP
+Modelo_TCC <- Arima(Ts_TCC, order = c(2,1,2), seasonal = c(0,1,0)) # SERIE 23-27 | 30-04 SEP|OCT
+
+white.test(Modelo_TCC$residuals) # > 0.05
+checkresiduals(Modelo_TCC) # < 0.05
+shapiro.test(Modelo_TCC$residuals)
+Pronos_TC <- forecast(Modelo_TCC,2)
+Pronos_TC$mean[1] <- Pronos_TC$mean[1]+20000000 
+plot(forecast(Modelo_TCC,2))
+Predit <- forecast(Modelo_TCC,2)
+
+# ________________________________________________________________________________ #
+
+Serie_Inter <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Serie_Servientrega.xlsx", 
+                          sheet = "INTER")
+Sys.setlocale("LC_TIME", "C")
+Serie_Inter$FECHA <- as.Date(strptime(Serie_Inter$FECHA,"%A, %B %d, %Y"))
+
+Plot_Inter <- ggplot(Serie_Inter, aes(x = FECHA, y = VALOR)) + geom_point() + geom_line() + theme_bw()
+
+ggplotly(Plot_Inter)
+Sys.setlocale("LC_TIME", "")
+
+Ts_Inter <- ts(Serie_Inter$VALOR, frequency = 2) # 8 en la seroe del 9-13 SEP
+
+acf(Ts_Inter, lag.max = 40)
+acf(diff(Ts_Inter), lag.max = 20)
+pacf(Ts_Inter, lag.max = 40)
+pacf(diff(Ts_Inter), lag.max = 20)
+adf.test(diff(Ts_Inter), alternative = "stationary")
+Identificacion_Serie(Ts_Inter,3,3,1,1,1,1)
+# > 0 1 3 0 1 0
+acf()
+Modelo_Inter <- Arima(Ts_Inter, order = c(2,0,0), seasonal = c(2,0,0))
+Modelo_Inter <- Arima(Ts_Inter, order = c(0,1,3), seasonal = c(0,1,0))
+Modelo_Inter <- Arima(Ts_Inter, order = c(0,1,1), seasonal = c(0,1,1))
+
+Modelo_Inter <- Arima(Ts_Inter, order = c(1,1,2), seasonal = c(0,1,0))
+Modelo_Inter <- Arima(Ts_Inter, order = c(1,1,1), seasonal = c(0,1,0)) # MODELO DE LA SEMANA 23-27 SEP
+
+Modelo_Inter <- Arima(Ts_Inter, order = c(2,1,3), seasonal = c(0,1,0)) # MODELO DE LA SEMANA 23-27 SEP
+
+
+white.test(Modelo_Inter$residuals)
+checkresiduals(Modelo_Inter$residuals);shapiro.test(Modelo_Inter$residuals)
+
+plot(forecast(Modelo_Inter,2))
+Pronos_IN <- forecast(Modelo_Inter,2)
+Pronos_IN$mean[1] <- Pronos_IN$mean[1]-150000000
+plot(Pronos_IN)
+
+# ________________________________________________________________________________ #
+Serie_Coordi <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Serie_Servientrega.xlsx", 
+                          sheet = "COORDI")
+Sys.setlocale("LC_TIME", "C")
+Serie_Coordi$FECHA <- as.Date(strptime(Serie_Coordi$FECHA,"%A, %B %d, %Y"))
+Serie_Coordi$FECHA[26] <- as.Date("2024-09-11")
+Plot_Coordi <- ggplot(Serie_Coordi, aes(x = FECHA, y = VALOR)) + geom_point() + geom_line() + theme_bw()
+ggplotly(Plot_Coordi)
+
+Sys.setlocale("LC_TIME", "")
+# Serie_Coordi <- Serie_Coordi[1:24,]
+Ts_Coordi <- ts(Serie_Coordi$VALOR, frequency = 3)
+Identificacion_Serie(Ts_Coordi,3,3,0,0,1,1)
+auto.arima(Ts_Coordi)
+acf(Ts_Coordi)
+pacf(Ts_Coordi)
+auto.arima(Ts_Coordi)
+pacf(diff(Ts_Coordi))
+Modelo_Coordi <- Arima(Ts_Coordi, order = c(2,1,0), seasonal = c(0,0,0))
+Modelo_Coordi <- arima(Ts_Coordi, order = c(2,1,0))
+Modelo_Coordi <- Arima(Ts_Coordi, order = c(1,1,0), seasonal = c(0,1,0)) # SERIE PRONOSTICO 23 DE SEP
+
+Modelo_Coordi <- Arima(Ts_Coordi, order = c(0,1,3), seasonal = c(0,1,0)) # SERIE PRONOSTICO 30 DE SEP | OCT
+
+
+white.test(Modelo_Coordi$residuals)
+checkresiduals(Modelo_Coordi$residuals)
+plot(forecast(Modelo_Coordi, 1))
+Pronos_CR <- forecast(Modelo_Coordi, 1)
+Pronos_CR$mean[1] <-Pronos_CR$mean[1] + 100000000
+plot(Serie_Coordi$FECHA,Serie_Coordi$VALOR, type = "l",ylim = c(min(Pronos_CR$fitted),max(Pronos_CR$fitted)))
+lines(c(Serie_Coordi$FECHA,as.Date(Day_1),as.Date(2),as.Date(3)),
+      c(Pronos_CR$fitted,Pronos_CR$mean),type = "l", col = "red")
+length(Pronos_CR$fitted);length(Serie_Coordi$VALOR)
+
+res_est_w1=residuals(Modelo_Coordi)/(Modelo_Coordi$sigma2^.5)  # estandarización de los residuales
+plot.ts(res_est_w1)
+ind=(abs(res_est_w1)>3)
+
+# ______________________ DOMINA
+rm(Librerias)
+Serie_Domi <- read_excel("C:/Users/Admin/OneDrive/Desktop/Brandon/Serie_Servientrega.xlsx", 
+                           sheet = "DOMINA")
+Sys.setlocale("LC_TIME", "C")
+Serie_Domi$FECHA <- as.Date(strptime(Serie_Domi$FECHA,"%A, %B %d, %Y"))
+
+Plot_Domi <- ggplot(Serie_Domi, aes(x = FECHA, y = VALOR)) + geom_point() + geom_line() + theme_bw()
+ggplotly(Plot_Domi)
+
+Sys.setlocale("LC_TIME", "")
+
+Ts_Domi <- ts(Serie_Domi$VALOR, frequency = 5)
+acf(Ts_Domi, lag.max = 80)
+pacf(Ts_Domi, lag.max = 80)
+
+acf(diff(Ts_Domi), lag.max = 20)
+pacf(diff(Ts_Domi), lag.max = 20)
+Identificacion_Serie(Ts_Domi,3,3,2,2,1,1)
+
+# 2 1 3 0 1 0
+# AUTO 0 1 1 2 0 1
+auto.arima(Ts_Domi)
+acf(diff(Ts_Domi), lag.max = 80)
+Pacf(diff(Ts_Domi), lag.max = 50)
+Modelo_Domi <- Arima(Ts_Domi, order = c(2,1,3), seasonal = c(0,1,0))
+Modelo_Domi <- Arima(Ts_Domi, order = c(0,1,1), seasonal = c(2,0,1))
+Modelo_Domi <- Arima(Ts_Domi, order = c(3,1,2), seasonal = c(2,1,1)) # PRIMEROS PRONOS OCT
+
+Pronos_DM <- forecast(Modelo_Domi,5)
+Pronos_DM$mean[5] <- Pronos_DM$mean[5]+3000000 
+
+Pronos_DM
