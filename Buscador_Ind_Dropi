@@ -1,0 +1,76 @@
+#%% CARGA DE LAS LIBRERIAS NECESARIAS 
+import polars as pl # type: ignore
+import numpy as np # type: ignore
+import openpyxl
+import fastexcel
+import pyarrow
+import pandas as pd
+
+#%% LECTURA DE LA BASE DEL DIA O MAS RECIENTE
+Url_BD = r'Desktop/Users_Repetidos_LATAM_Corte.xlsx'
+BD_Multiples_Users = pl.read_excel(source = Url_BD)
+
+BD_Multiples_Users = BD_Multiples_Users.with_columns(
+    pl.col(['phone', 'store_phone', 'dni', 'dni_invoice', 
+    'email', 'email_to_invoice']).cast(pl.Utf8, strict=False)
+)
+
+def Buscador_Manual(df_completo, email_inicial, num_ciclos):
+
+    Subset_Email = BD_Multiples_Users.filter(pl.col('email') == email_inicial)
+
+    All_Numbers = pl.concat([
+        Subset_Email.select('phone'),
+        Subset_Email.select(pl.col('store_phone').alias('phone'))
+    ]).drop_nulls().unique().get_column('phone')
+
+    Unique_Dnis = Subset_Email.select('dni').drop_nulls().unique().get_column('dni')
+    Email_General = Subset_Email.select('email').drop_nulls().unique().get_column('email')
+    
+    coincidencias_finales = pl.DataFrame()
+
+    for i in range(num_ciclos):
+        print(f" Ciclo de Búsqueda: {i + 1}")
+        
+        coincidencias_ronda = df_completo.filter((
+        pl.col('phone').is_in(All_Numbers) |
+        pl.col('store_phone').is_in(All_Numbers) |
+        pl.col('dni').is_in(Unique_Dnis) |
+        pl.col('dni_invoice').is_in(Unique_Dnis) |
+        pl.col('email').is_in(Email_General) |
+        pl.col('email_to_invoice').is_in(Email_General)
+        ))
+        
+        print(f"Ciclo {i + 1}: Se encontraron {len(coincidencias_ronda)} coincidencias.")
+
+        if len(coincidencias_ronda) == 0:
+            print("No se encontraron coincidencias, deteniendo la búsqueda.")
+            break
+            
+        All_Numbers = pl.concat([
+            coincidencias_ronda.select('phone'),
+            coincidencias_ronda.select(pl.col('store_phone').alias('phone'))
+        ]).drop_nulls().unique().get_column('phone')
+
+        Unique_Dnis = pl.concat([
+            coincidencias_ronda.select('dni'),
+            coincidencias_ronda.select(pl.col('dni_invoice').alias('dni'))
+        ]).drop_nulls().unique().get_column('dni')
+
+        Email_General = pl.concat([
+            coincidencias_ronda.select('email'),
+            coincidencias_ronda.select(pl.col('email_to_invoice').alias('email'))
+        ]).drop_nulls().unique().get_column('email')
+        
+        coincidencias_finales = coincidencias_ronda
+        
+    print("\n--- Búsqueda finalizada ---")
+    return coincidencias_finales
+
+#%% EJECUTAR LA FUNCION CON EL CORREO QUE SE DESEA BUSCAR __ #:
+Resultado_Final = Buscador_Manual(
+    df_completo = BD_Multiples_Users, 
+    email_inicial = 'tiendadeabrigos2025@gmail.com',
+    num_ciclos = 5)
+
+Resultado_Final.write_excel("Desktop/Users_tiendadeabrigos2025@gmail.xlsx", worksheet = "BD")
