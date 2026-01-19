@@ -70,7 +70,7 @@ def Buscador_Manual(df_completo, email_inicial, num_ciclos):
 #%% EJECUTAR LA FUNCION CON EL CORREO QUE SE DESEA BUSCAR __ #:
 Resultado_Final = Buscador_Manual(
     df_completo = BD_Multiples_Users, 
-    email_inicial = 'tiendadeabrigos2025@gmail.com',
+    email_inicial = 'example@email.com',
     num_ciclos = 5)
 
 Resultado_Final.write_excel("Desktop/Users_tiendadeabrigos2025@gmail.xlsx", worksheet = "BD")
